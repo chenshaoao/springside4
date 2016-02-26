@@ -5,6 +5,7 @@
  *******************************************************************************/
 package org.springside.modules.persistence;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -29,6 +30,8 @@ public class DynamicSpecifications {
 				if (Collections3.isNotEmpty(filters)) {
 
 					List<Predicate> predicates = Lists.newArrayList();
+					List<Predicate> orPredicates = Lists.newArrayList();
+					Predicate orPredicate = null;
 					for (SearchFilter filter : filters) {
 						// nested path translate, 如Task的名为"user.name"的filedName, 转换为Task.user.name属性
 						String[] names = StringUtils.split(filter.fieldName, ".");
@@ -36,7 +39,7 @@ public class DynamicSpecifications {
 						for (int i = 1; i < names.length; i++) {
 							expression = expression.get(names[i]);
 						}
-
+						
 						// logic operator
 						switch (filter.operator) {
 						case EQ:
@@ -57,8 +60,37 @@ public class DynamicSpecifications {
 						case LTE:
 							predicates.add(builder.lessThanOrEqualTo(expression, (Comparable) filter.value));
 							break;
+						case OR1:
+							orPredicate = builder.equal(expression, filter.value);
+							orPredicates.add(builder.equal(expression, filter.value));
+							break;
+						case OR2:
+							orPredicate = builder.equal(expression, filter.value);
+							orPredicates.add(builder.equal(expression, filter.value));
+							break;
+						case OR3:
+							orPredicate = builder.equal(expression, filter.value);
+							orPredicates.add(builder.equal(expression, filter.value));
+							break;
+						case OR4:
+							orPredicate = builder.equal(expression, filter.value);
+							orPredicates.add(builder.equal(expression, filter.value));
+							break;
+						case IN:
+							//Expression<Integer> exp = scheduleRequest.get("createdBy");
+							Predicate predicate = expression.in((List)filter.value);
+							predicates.add(predicate);
+							break;
 						}
 					}
+					//chenshaoao 如果就一个or 条件，就是and 查询
+					if(orPredicates.size() == 1) {
+						predicates.add(orPredicate);
+					}
+					//chenshaoao 如果有多个or 条件，需要组合再添加到and 查询
+					if(orPredicates.size()>1) {
+						predicates.add(builder.or(orPredicates.toArray(new Predicate[orPredicates.size()])));
+					} 
 
 					// 将所有条件用 and 联合起来
 					if (!predicates.isEmpty()) {

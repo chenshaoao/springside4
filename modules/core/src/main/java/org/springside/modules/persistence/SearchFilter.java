@@ -5,6 +5,7 @@
  *******************************************************************************/
 package org.springside.modules.persistence;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -15,7 +16,7 @@ import com.google.common.collect.Maps;
 public class SearchFilter {
 
 	public enum Operator {
-		EQ, LIKE, GT, LT, GTE, LTE
+		EQ, LIKE, GT, LT, GTE, LTE, OR1, OR2, OR3, OR4, IN
 	}
 
 	public String fieldName;
@@ -37,11 +38,6 @@ public class SearchFilter {
 		for (Entry<String, Object> entry : searchParams.entrySet()) {
 			// 过滤掉空值
 			String key = entry.getKey();
-			Object value = entry.getValue();
-			if (StringUtils.isBlank((String) value)) {
-				continue;
-			}
-
 			// 拆分operator与filedAttribute
 			String[] names = StringUtils.split(key, "_");
 			if (names.length != 2) {
@@ -50,9 +46,30 @@ public class SearchFilter {
 			String filedName = names[1];
 			Operator operator = Operator.valueOf(names[0]);
 
+			Object value = entry.getValue();
 			// 创建searchFilter
-			SearchFilter filter = new SearchFilter(filedName, operator, value);
-			filters.put(key, filter);
+			SearchFilter filter = null;
+			
+			if(value instanceof String) {
+				if (StringUtils.isBlank((String) value)) {
+					continue;
+				} else {
+					filter = new SearchFilter(filedName, operator, value);
+					filters.put(key, filter);
+				}
+				//or 查询条件 待优化 TODO
+			} else if(value instanceof String[]) {
+				String[] ors = (String[])value;
+				for(String orValue: ors) {
+					filter = new SearchFilter(filedName, operator, orValue);
+					//chenshaoao key 相同值会被覆盖，or 必须使用不同的值
+					filters.put(key, filter);
+				}
+				//in 查询条件
+			} else if(value instanceof List) {
+				filter = new SearchFilter(filedName, operator, value);
+				filters.put(key, filter);
+			}
 		}
 
 		return filters;
